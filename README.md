@@ -1,10 +1,9 @@
 <h1 align="center">The ESP-EYE</h1>
 
-<pre>
 Released in early 2019, the ESP-EYE was a milestone for Espressif's development boards, popular among DIY makers and edge-device developers. A newer board in the same line is the ESP32-S3-EYE, initially developed in late 2021, and so the ESP-EYE has since reached EOL.
 <!-- S3-EYE date from first commit in repo, not retail launch -->
 But What is it?
-ESP-EYE is a development board for image recognition and speech signal processing, on which it integrates an on-board ESP32 chip, a 2 megapixel camera, and a digital microphone, 8MByte PSRAM and 4MByte flash. The board also supports image transmission via Wi-Fi and debugging through a Micro-USB port.</pre>
+ESP-EYE is a development board for image recognition and speech signal processing, on which it integrates an on-board ESP32 chip, a 2 megapixel camera, and a digital microphone, 8MByte PSRAM and 4MByte flash. The board also supports image transmission via Wi-Fi and debugging through a Micro-USB port.
 
 <h3>The Board</h3>
 <img align="left" width="43.5%" src="./images/readme/ESP-EYE_front.png" alt="front of the ESP-EYE board">
@@ -192,15 +191,15 @@ ESP-EYE is a development board for image recognition and speech signal processin
 <br clear="all">
 
 <h3>Some "left behind" data</h3>
-<pre>The ESP-EYE has a limited quantity of memory to be utilized for the model or for the projects that you may decide to use it for: Flash/PSRAM for model: under ~250KB int8 (leaves headroom for camera buffers, TFLite Micro runtime,eventual Arduino sketch) and takes as inputs a 96×96 grayscale that keeps compute down (grayscale is fine if you're classifying obstacle silhouettes, not needing color)</pre>
+The ESP-EYE has a limited quantity of memory to be utilized for the model or for the projects that you may decide to use it for: Flash/PSRAM for model: under ~250KB int8 (leaves headroom for camera buffers, TFLite Micro runtime,eventual Arduino sketch) and takes as inputs a 96×96 grayscale that keeps compute down (grayscale is fine if you're classifying obstacle silhouettes, not needing color)
 
 <h3>How to insert an ML model</h3>
 <h5>using TFLite, a custom made model similar to a ResNet and the ESP-IDF</h5>
-<pre>Requirements: 
+Requirements: 
 To install and use ESP-IDF, you'll need Git, Python 3.0-14.0, and the ESP-IDF Installation Manager (EIM).
 Once those are installed, follow the <a href="https://docs.espressif.com/projects/idf-im-ui/en/latest/">Getting Started</a> guide on the Espressif site.
 Unfortunately the ESP-EYE, with its limited PSRAM, cannot use a big model like a pretrained ResNet one and needs one modeled to its maximum usage.
-So we tailor one that can be uploaded: using the structure of the ResNet model we define this model: ReTINY, with this architecture:</pre>
+So we tailor one that can be uploaded: using the structure of the ResNet model we define this model: ReTINY, with this architecture:
 
 
 <table align="center">
@@ -259,8 +258,8 @@ So we tailor one that can be uploaded: using the structure of the ResNet model w
 </table>
 <br clear="all">
 
-<pre>To create a new model you have to change the parameters that are described in the ESP-EYE-Model.py file.
-To train your model you will need to create a "data" with internal folders organized per class (every folder has to have its class name) and execute the file with the correct informations.</pre>
+To create a new model you have to change the parameters that are described in the ESP-EYE-Model.py file.
+To train your model you will need to create a "data" with internal folders organized per class (every folder has to have its class name) and execute the file with the correct informations.
 
 <table align="center">
 <thead>
@@ -305,8 +304,8 @@ To train your model you will need to create a "data" with internal folders organ
 </tbody>
 </table>
 
-<pre>After creating your model you will have to quantize it as it will not be: first and foremost usable by the ESP-EYE and secondly too large to fit inside its PSRAM (as discussed before).
-You can execute the file ESP-EYE-Quantizing.py to do so, with the commands:</pre>
+After creating your model you will have to quantize it as it will not be: first and foremost usable by the ESP-EYE and secondly too large to fit inside its PSRAM (as discussed before).
+You can execute the file ESP-EYE-Quantizing.py to do so, with the commands:
 
 
 <table align="center">
@@ -340,9 +339,9 @@ You can execute the file ESP-EYE-Quantizing.py to do so, with the commands:</pre
 </tbody>
 </table>
 
-<pre>And at last, after completing these necessary steps, you will need to upload of the model, that can be done on the Arduino IDE after installing the necessary Libraries, in this case I used: "esp32" board package (provides esp_camera.h for ESP-EYE) and "TensorFlowLite_ESP32" or the newer "Arduino_TensorFlowLite" / tflite-micro Arduino port.</pre>
+And at last, after completing these necessary steps, you will need to upload of the model, that can be done on the Arduino IDE after installing the necessary Libraries, in this case I used: "esp32" board package (provides esp_camera.h for ESP-EYE) and "TensorFlowLite_ESP32" or the newer "Arduino_TensorFlowLite" / tflite-micro Arduino port.
 
-<pre>After flashing the ESP-EYE you can connect it to an Arduino mega or UNO to test its results or you can directly use it on your laptop/pc with the test scripts and evaluate it with the evaluation script:</pre>
+After flashing the ESP-EYE you can connect it to an Arduino mega or UNO to test its results or you can directly use it on your laptop/pc with the test scripts and evaluate it with the evaluation script:
 
 <h3 align="center">esp_eye_capture.py</h3>
 <table align="center">
@@ -488,7 +487,7 @@ You can execute the file ESP-EYE-Quantizing.py to do so, with the commands:</pre
 </tbody>
 </table>
 
-<pre>I left the data folder with which I trained my ReTina model, you can use your own as long as you modify  class names in the ESP-EYE-Model.py file and your folder follows your class representation.
-You don't need to modify the ESP-EYE-Quantizing.py file as it just compresses the file and doesn't interfere with the folder arrangements.</pre>
+I left the data folder with which I trained my ReTina model, you can use your own as long as you modify  class names in the ESP-EYE-Model.py file and your folder follows your class representation.
+You don't need to modify the ESP-EYE-Quantizing.py file as it just compresses the file and doesn't interfere with the folder arrangements.
 
 <h5 align="left">Contributors: <i>Agosti Tommaso</i></h5>
