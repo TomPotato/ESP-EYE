@@ -6,9 +6,10 @@ But What is it?
 ESP-EYE is a development board for image recognition and speech signal processing, on which it integrates an on-board ESP32 chip, a 2 megapixel camera, and a digital microphone, 8MByte PSRAM and 4MByte flash. The board also supports image transmission via Wi-Fi and debugging through a Micro-USB port.
 
 <h3>The Board</h3>
-<img align="left" width="43%" src="./images/readme/ESP-EYE_front.png" alt="front of the ESP-EYE board">
-<img align="right" width="56%" src="./images/readme/ESP-EYE_back.png" alt="back of the ESP-EYE board">
-
+<p float="left">
+    <img width="43%" src="./images/readme/ESP-EYE_front.png" alt="front of the ESP-EYE board">
+    <img width="56%" src="./images/readme/ESP-EYE_back.png" alt="back of the ESP-EYE board">
+</p>
 <br clear="all">
 
 <table>
