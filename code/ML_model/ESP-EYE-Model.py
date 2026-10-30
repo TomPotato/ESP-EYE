@@ -25,6 +25,7 @@ Expected directory layout for training data:
 
 import argparse 
 import os
+import matplotlib.pyplot as plt
 
 import tensorflow as tf
 from keras import layers, models
@@ -127,43 +128,38 @@ def build_datasets(data_dir, batch_size):
 
     return train_ds.prefetch(tf.data.AUTOTUNE), val_ds.prefetch(tf.data.AUTOTUNE)
 
-def build_datasets_extra(data_dir, extra_train_dir, batch_size):
-    """Build datasets using both the regular and extra training data."""
-    train_ds = tf.keras.utils.image_dataset_from_directory(
-        os.path.join(data_dir, "train"),
-        labels="inferred",
-        label_mode="categorical",
-        class_names=CLASS_NAMES,
-        color_mode="grayscale",
-        image_size=(IMG_SIZE, IMG_SIZE),
-        batch_size=batch_size,
-        shuffle=True,
-    )
-    val_ds = tf.keras.utils.image_dataset_from_directory(
-        os.path.join(data_dir, "val"),
-        labels="inferred",
-        label_mode="categorical",
-        class_names=CLASS_NAMES,
-        color_mode="grayscale",
-        image_size=(IMG_SIZE, IMG_SIZE),
-        batch_size=batch_size,
-        shuffle=False,
-    )
+def draw_loss_plot(history):
 
-    # Normalize to [0, 1] and apply light augmentation on the training set only.
-    normalize = layers.Rescaling(1.0 / 255)
+    # Draw a graph of the loss, which is the distance between
+    # the predicted and actual values during training and validation.
+    train_loss = history.history['loss']
+    val_loss = history.history['val_loss']
 
-    augment = tf.keras.Sequential([
-        layers.RandomBrightness(0.15),
-        layers.RandomContrast(0.15),
-        layers.RandomRotation(0.03),  # small: obstacle course framing is roughly fixed
-    ])
+    epochs = range(1, len(train_loss) + 1)
 
-    train_ds = train_ds.map(lambda x, y: (normalize(augment(x)), y))
-    val_ds = val_ds.map(lambda x, y: (normalize(x), y))
+    plt.plot(epochs, train_loss, 'g', label='Training loss')
+    plt.plot(epochs, val_loss, 'b', label='Validation loss')
+    plt.title('Training and validation loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.show()
 
-    return train_ds.prefetch(tf.data.AUTOTUNE), val_ds.prefetch(tf.data.AUTOTUNE)
+def draw_accuracy_plot(history):
+    # Draw a graph of the accuracy, which is the percentage of correct predictions
+    # during training and validation.
+    train_acc = history.history['accuracy']
+    val_acc = history.history['val_accuracy']
 
+    epochs = range(1, len(train_acc) + 1)
+
+    plt.plot(epochs, train_acc, 'g', label='Training accuracy')
+    plt.plot(epochs, val_acc, 'b', label='Validation accuracy')
+    plt.title('Training and validation accuracy')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.show()
 
 def main():
     print(f"\nBuilding and training Tiny-ResNet on {NUM_CLASSES} classes: {CLASS_NAMES}\n")
@@ -176,11 +172,7 @@ def main():
     parser.add_argument("--out", default="tiny_resnet_obstacle.keras")
     args = parser.parse_args()
 
-    # check if args.extra_train_dir is provided, and if so, copy its contents into the train directory
-    if args.extra_train_dir:
-        train_ds, val_ds = build_datasets_extra(args.data_dir,args.extra_train_dir,args.batch_size)
-    else:
-        train_ds, val_ds = build_datasets(args.data_dir, args.batch_size)
+    train_ds, val_ds = build_datasets(args.data_dir, args.batch_size)
 
     model = build_tiny_resnet()
     model.summary()
@@ -198,7 +190,10 @@ def main():
         tf.keras.callbacks.ReduceLROnPlateau(patience=6, factor=0.5, monitor="val_loss"),
     ]
 
-    model.fit(train_ds, validation_data=val_ds, epochs=args.epochs, callbacks=callbacks)
+    history = model.fit(train_ds, validation_data=val_ds, epochs=args.epochs, callbacks=callbacks)
+
+    draw_loss_plot(history)
+    draw_accuracy_plot(history)
 
     print(f"\nBest model saved to {args.out}")
     print("Next: run quantize_and_convert.py on this file to produce the ESP-EYE model.h")

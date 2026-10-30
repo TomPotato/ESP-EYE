@@ -260,7 +260,7 @@ So we tailor one that can be uploaded: using the structure of the ResNet model w
 <br clear="all">
 
 To create a new model you have to change the parameters that are described in the ESP-EYE-Model.py file.
-To train your model you will need to create a "data" with internal folders organized per class (every folder has to have its class name) and execute the file with the correct informations.
+To train your model you will need to create a "data" with internal folders organized per class (every folder has to have its class name) and execute the file with the correct informations. At the end of the training I inserted two diagrams created with the plt library of numpy, this shows graphically how the accuracy and loss of the model behaved during the training epochs.
 
 <table align="center">
 <thead>
