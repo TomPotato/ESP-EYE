@@ -191,304 +191,161 @@ ESP-EYE is a development board for image recognition and speech signal processin
 
 <br clear="all">
 
-<h3>Some "left behind" data</h3>
-The ESP-EYE has a limited quantity of memory to be utilized for the model or for the projects that you may decide to use it for: Flash/PSRAM for model: under ~250KB int8 (leaves headroom for camera buffers, TFLite Micro runtime,eventual Arduino sketch) and takes as inputs a 96×96 grayscale that keeps compute down (grayscale is fine if you're classifying obstacle silhouettes, not needing color)
+## Overview
 
-<h3>How to insert an ML model</h3>
-<h5>using TFLite, a custom made model similar to a ResNet and the ESP-IDF</h5>
-Requirements: 
-To install and use ESP-IDF, you'll need Git, Python 3.0-14.0, and the ESP-IDF Installation Manager (EIM).
-Once those are installed, follow the <a href="https://docs.espressif.com/projects/idf-im-ui/en/latest/">Getting Started</a> guide on the Espressif site.
-Unfortunately the ESP-EYE, with its limited PSRAM, cannot use a big model like a pretrained ResNet one and needs one modeled to its maximum usage.
-So we tailor one that can be uploaded: using the structure of the ResNet model we define this model: ReTINY, with this architecture:
+This repository contains the code developed for a model to be trained, flashed and then executed on an ESP-EYE.
 
+The repository contains:
 
-<table align="center">
-<thead>
-<tr>
-<th align="left">Stage</th>
-<th align="left">Layers</th>
-<th align="center">Output shape</th>
-<th align="left">Details</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<th align="cemter">Stem</th>
-<th align="center">Conv 3x3</th>
-<th align="center">Stride 2</th>
-<th align="center">8 filters</th>
-</tr>
-<tr>
-<td>Stage 1</td>
-<td>1 residual block, 8→8 channels</td>
-<td align="center">48×48×8</td>
-<td>Conv 3×3 → Conv 3×3 + skip</td>
-</tr>
-<tr>
-<td>Downsample</td>
-<td>Conv 3×3, stride 2, 8→16</td>
-<td align="center">24×24×16</td>
-<td></td>
-</tr>
-<tr>
-<td>Stage 2</td>
-<td>1 residual block, 16→16 channels</td>
-<td align="center">24×24×16</td>
-<td>Conv 3×3 → Conv 3×3 + skip</td>
-</tr>
-<tr>
-<td>Downsample</td>
-<td>Conv 3×3, stride 2, 16→32</td>
-<td align="center">12×12×32</td>
-<td></td>
-</tr>
-<tr>
-<td>Stage 3</td>
-<td>1 residual block, 32→32 channels</td>
-<td align="center">12×12×32</td>
-<td>Conv 3×3 → Conv 3×3 + skip</td>
-</tr>
-<tr>
-<td>Head</td>
-<td>Global average pool → Dense(32→4)</td>
-<td align="center">4</td>
-<td>Softmax over clear/left/center/right</td>
-</tr>
-</tbody>
-</table>
-<br clear="all">
+- a very small ResNet-style classifier (about 30.5 thousand trainable parameters, about 9.5 million MACs per image);
+- converters that build the dataset from public datasets (NYU Depth V2, COCO 2017);
+- training, 8-bit quantization and evaluation scripts;
+- the ESP-EYE firmware, and a PC tool to stream frames from the board, collect labelled images and evaluate the model live;
 
-To create a new model you have to change the parameters that are described in the ESP-EYE-Model.py file.
-To train your model you will need to create a "data" with internal folders organized per class (every folder has to have its class name) and execute the file with the correct informations. At the end of the training I inserted two diagrams created with the plt library of numpy, this shows graphically how the accuracy and loss of the model behaved during the training epochs.
+## Repository Structure
 
-<table align="center">
-<thead>
-<tr>
-<th align="left">Argument</th>
-<th align="center">Type</th>
-<th align="center">Default</th>
-<th align="left">Details</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>--data_dir</code></td>
-<td align="center">str</td>
-<td align="center">Required</td>
-<td>Path to <code>data/</code> containing <code>train/</code> and <code>val/</code></td>
-</tr>
-<tr>
-<td><code>--epochs</code></td>
-<td align="center">int</td>
-<td align="center">40</td>
-<td>Number of training epochs</td>
-</tr>
-<tr>
-<td><code>--batch_size</code></td>
-<td align="center">int</td>
-<td align="center">32</td>
-<td>Number of samples processed per batch</td>
-</tr>
-<tr>
-<td><code>--lr</code></td>
-<td align="center">float</td>
-<td align="center">1e-3</td>
-<td>Learning rate used during training</td>
-</tr>
-<tr>
-<td><code>--out</code></td>
-<td align="center">str</td>
-<td align="center">tiny_resnet_obstacle.keras</td>
-<td>Output path for the saved model</td>
-</tr>
-</tbody>
-</table>
+```text
+thesis-project/
+│
+├── code/
+│   ├── Arduino_side/          # firmware: ESP32-CAM, Arduino Mega, test sketches
+│   ├── ML_model/              # dataset converters, training, quantization
+│   ├── model_testing/         # evaluation scripts, PC capture and live-evaluation tool
+│   └── preprocessing_scripts  # image processing scripts
+│
+├── data/                    # compressed in data.zip (too large for the repository)
+│   ├── train/
+│   │   ├── clear/
+│   │   ├── center_blocked/
+│   │   ├── left_blocked/
+│   │   └── right_blocked/
+│   └── val/
+│       ├── clear/
+│       ├── center_blocked/
+│       ├── left_blocked/
+│       └── right_blocked/
+│
+├── data_own/                # images captured with the ESP32-CAM (compressed .zip file)
+│   └── val/
+│       ├── clear/
+│       ├── center_blocked/
+│       ├── left_blocked/
+│       └── right_blocked/
+│
+├── images/
+│   └── readme/
+│
+├── model/
+│   ├── not_quantized/       # float Keras model
+│   └── quantized/           # int8 .tflite and model.h (C array for the firmware)
+│
+├── data.zip
+├── requirements.txt
+├── LICENSE
+└── README.md
+```
 
-After creating your model you will have to quantize it as it will not be: first and foremost usable by the ESP-EYE and secondly too large to fit inside its PSRAM (as discussed before).
-You can execute the file ESP-EYE-Quantizing.py to do so, with the commands:
+### Files and what they do
 
+| File | Folder | Purpose |
+|---|---|---|
+| `nyu_preprocessing.py` | `code/preprocessing_scripts` | Converts the NYU Depth V2 labeled `.mat` into the four classes, labelling each frame from its depth map |
+| `coco_preprocessing.py` | `code/preprocessing_scripts` | Converts COCO 2017 bounding boxes into the four classes |
+| `ESP-EYE-Model.py` | `code/ML_model` | Defines and trains the network (Keras) |
+| `ESP-EYE-Quantizing.py` | `code/ML_model` | 8-bit post-training quantization, writes the `.tflite` file and `model.h` |
+| `test.py` | `code/model_testing` | Runs the int8 model on the PC on a folder, an image or a webcam |
+| `models_evaluation.py` | `code/model_testing` | Accuracy, macro precision and recall, sizes of the float and int8 models |
+| `esp_eye_capture.py` | `code/model_testing` | Receives frames from the board over USB, saves labelled images, live evaluation |
+| `esp_eye_firmware.ino` | `code/Arduino_side` | ESP-EYE firmware: capture, inference, class byte over UART, frame streaming |
 
-<table align="center">
-<thead>
-<tr>
-<th align="left">Argument</th>
-<th align="center">Type</th>
-<th align="center">Default</th>
-<th align="left">Details</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>--model</code></td>
-<td align="center">str</td>
-<td align="center">Required</td>
-<td>Path to the trained <code>.keras</code> model</td>
-</tr>
-<tr>
-<td><code>--data_dir</code></td>
-<td align="center">str</td>
-<td align="center">Required</td>
-<td>Path to <code>data/</code>, using <code>train/</code> for calibration</td>
-</tr>
-<tr>
-<td><code>--out_dir</code></td>
-<td align="center">str</td>
-<td align="center"><code>./esp_model</code></td>
-<td>Output directory for the generated ESP model files</td>
-</tr>
-</tbody>
-</table>
+## Installation
 
-And at last, after completing these necessary steps, you will need to upload of the model, that can be done on the Arduino IDE after installing the necessary Libraries, in this case I used: "esp32" board package (provides esp_camera.h for ESP-EYE) and "TensorFlowLite_ESP32" or the newer "Arduino_TensorFlowLite" / tflite-micro Arduino port.
+Clone the repository:
 
-After flashing the ESP-EYE you can connect it to an Arduino mega or UNO to test its results or you can directly use it on your laptop/pc with the test scripts and evaluate it with the evaluation script:
+```bash
+git clone https://github.com/TomPotato/ESP-EYE.git
+cd Thesis_TinyML_in_Practice
+```
 
-<h3 align="center">esp_eye_capture.py</h3>
-<table align="center">
-<thead>
-<tr>
-<th align="left">Argument</th>
-<th align="center">Type</th>
-<th align="center">Default</th>
-<th align="left">Details</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>--port</code></td>
-<td align="center">str</td>
-<td align="center">Required</td>
-<td>Serial port used to connect to the board, e.g. <code>COM3</code> or <code>/dev/ttyUSB0</code></td>
-</tr>
-<tr>
-<td><code>--baud</code></td>
-<td align="center">int</td>
-<td align="center">921600</td>
-<td>Serial communication baud rate; must match <code>SERIAL_BAUD</code> in the firmware</td>
-</tr>
-<tr>
-<td><code>--out_dir</code></td>
-<td align="center">str</td>
-<td align="center"><code>./data_own</code></td>
-<td>Output directory where collected data is saved</td>
-</tr>
-<tr>
-<td><code>--subset</code></td>
-<td align="center">str</td>
-<td align="center"><code>train</code></td>
-<td>Dataset subset to save; options are <code>train</code> or <code>val</code></td>
-</tr>
-<tr>
-<td><code>--interval</code></td>
-<td align="center">float</td>
-<td align="center">0.3</td>
-<td>Time in seconds between saved frames in burst mode</td>
-</tr>
-<tr>
-<td><code>--no_reset</code></td>
-<td align="center">flag</td>
-<td align="center">False</td>
-<td>Prevents the board from being reset when connecting</td>
-</tr>
-<tr>
-<td><code>--boot_wait</code></td>
-<td align="center">float</td>
-<td align="center">2.5</td>
-<td>Time in seconds to wait after opening the serial port</td>
-</tr>
-</tbody>
-</table>
+Install the Python dependencies (a virtual environment is recommended):
 
-<h3 align="center">models_evaluation.py</h3>
-<table align="center">
-<thead>
-<tr>
-<th align="left">Argument</th>
-<th align="center">Type</th>
-<th align="center">Default</th>
-<th align="left">Details</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>--keras</code></td>
-<td align="center">str</td>
-<td align="center">Required</td>
-<td>Path to the trained float model in <code>.keras</code> format</td>
-</tr>
-<tr>
-<td><code>--tflite</code></td>
-<td align="center">str</td>
-<td align="center">Required</td>
-<td>Path to the quantized INT8 model in <code>.tflite</code> format</td>
-</tr>
-<tr>
-<td><code>--eval_dir</code></td>
-<td align="center">str</td>
-<td align="center">Required</td>
-<td>Path to the evaluation dataset folder containing the four class subfolders</td>
-</tr>
-<tr>
-<td><code>--device_ms</code></td>
-<td align="center">float</td>
-<td align="center">None</td>
-<td>Mean inference time measured on the board, in milliseconds (ms)</td>
-</tr>
-</tbody>
-</table>
+```bash
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-<h3 align="center">test-py</h3>
-<table align="center">
-<thead>
-<tr>
-<th align="left">Argument</th>
-<th align="center">Type</th>
-<th align="center">Default</th>
-<th align="left">Details</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>--model</code></td>
-<td align="center">str</td>
-<td align="center">Required</td>
-<td>Path to the quantized INT8 model in <code>.tflite</code> format</td>
-</tr>
-<tr>
-<td><code>--eval_dir</code></td>
-<td align="center">str</td>
-<td align="center">None</td>
-<td>Path to the evaluation dataset containing class subfolders such as <code>clear/</code> and <code>left_blocked/</code></td>
-</tr>
-<tr>
-<td><code>--image</code></td>
-<td align="center">str</td>
-<td align="center">None</td>
-<td>Path to a single image to classify</td>
-</tr>
-<tr>
-<td><code>--webcam</code></td>
-<td align="center">flag</td>
-<td align="center">False</td>
-<td>Enables real-time classification using a webcam</td>
-</tr>
-<tr>
-<td><code>--camera</code></td>
-<td align="center">int</td>
-<td align="center">0</td>
-<td>Webcam device index used for video capture</td>
-</tr>
-<tr>
-<td><code>--keras</code></td>
-<td align="center">str</td>
-<td align="center">None</td>
-<td>Optional path to a float <code>.keras</code> model for comparison when using <code>--eval_dir</code></td>
-</tr>
-</tbody>
-</table>
+For the firmware you also need the **Arduino IDE** with:
 
-I left the data folder with which I trained my ReTina model, you can use your own as long as you modify  class names in the ESP-EYE-Model.py file and your folder follows your class representation.
-You don't need to modify the ESP-EYE-Quantizing.py file as it just compresses the file and doesn't interfere with the folder arrangements.
+- the Espressif **esp32** board package version, 2.0.1 used in the thesis;
+- the TensorFlow Lite Micro Arduino library;
 
-<h5 align="left">Contributors: <i>Agosti Tommaso</i></h5>
+## Usage
+
+To reproduce the experiments, follow these steps. The data folder with the converted dataset is available as `data.zip`; if you use it, you can skip steps 1 to 3.
+
+### 1. Download and extract the public datasets
+
+- **COCO 2017**: the `train2017` and `val2017` images and `annotations_trainval2017.zip` from <https://cocodataset.org>.
+- **NYU Depth V2**: the *labeled* subset `nyu_depth_v2_labeled.mat` from <https://cs.nyu.edu/~fergus/datasets/nyu_depth_v2.html>.
+
+### 2. Convert the datasets to the four classes
+
+```bash
+python nyu_preprocessing.py --mat nyu_depth_v2_labeled.mat --out_dir ./data_nyu --add_flips
+
+python coco_preprocessing.py --ann annotations/instances_train2017.json --images train2017 --out_dir ./data_coco --max_per_class 2000 --add_flips
+```
+
+Both scripts write `train/` and `val/` folders and a `preview.png` contact sheet: look at it to check that the automatic labels are reasonable. All images are saved as $96 \times 96$ grayscale.
+
+### 3. Merge the datasets
+Create a new folder named data and drag and drop the train and val folders from both NYU and COCO into it to merge them. The images will not overlap, as they have different filenames.
+
+Images captured with the ESP-EYE (see step 8) are added to the same class folders.
+
+### 4. Train the model
+
+```bash
+python ESP-EYE-Model.py --data_dir data --epochs 40 --lr 1e-6 --out model/not_quantized/ReTINA_not_quantized.keras                                                          
+```
+
+The best model is saved as `ReTINA_not_quantized.keras`.
+
+### 5. Quantize and convert
+
+```bash
+python Model_Quantizing.py --model model/not_quantized/tiny_resnet_not_quantized.keras --data_dir data --out_dir model/quantized                                                      
+```
+
+This writes the int8 `.tflite` file and `model.h`, the C array to be compiled into the firmware. The calibration images are taken from the dataset folder (see the note on the calibration set in the thesis).
+
+### 6. Evaluate the models
+
+```bash
+python models_evaluation.py \
+    --keras model/not_quantized/tiny_resnet_not_quantized.keras \
+    --tflite model/quantized/tiny_resnet_obstacle_int8.tflite \
+    --eval_dir data/val --device_ms 685
+```
+
+It prints the confusion matrices, per-class and macro precision and recall and the model sizes. `test.py` runs the int8 model on a folder (`--eval_dir`), a single image (`--image`) or a webcam (`--webcam`).
+
+### 7. Deploy on the ESP32-CAM
+
+1. Copy `model.h` next to `esp_eye_firmware.ino`.
+2. In the sketch, modify  `CAMERA_ROTATE_180` if your camera is mounted upside down.
+3. Arduino IDE: board *ESP-EYE*, **PSRAM enabled**. Flashing needs a USB-serial adapter with GPIO0 connected to GND during the upload (remove it afterwards).
+4. At start-up the firmware prints how much of the tensor arena it uses, and where it was allocated (internal RAM or PSRAM).
+
+The firmware sends the predicted class (0 to 3) as one byte on UART1 (GPIO14 on the AI-Thinker board) to the Arduino Mega.
+
+### 8. Capture images and evaluate live (optional)
+
+Close the Arduino Serial Monitor first, then:
+
+```bash
+python esp_eye_capture.py --port COM3 --out_dir ./data_own --subset val
+```
+
+Keys: `1`-`4` select the class, `s` saves a frame, `SPACE` saves bursts, `e` starts/stops the live evaluation (accuracy measured on the board), `q` quits.
